@@ -81,7 +81,6 @@
 
     <div id="status"></div>
 
-    <!-- Dane wysyłki / Klient -->
     <div class="card">
       <div class="field">
         <label>Klient / Zamówienie docelowe</label>
@@ -93,7 +92,6 @@
       </label>
     </div>
 
-    <!-- Skanowanie aparatem -->
     <div class="card">
       <label for="fileInput" class="camera-trigger" id="triggerArea">
         <svg width="32" height="32" fill="none" stroke="#38bdf8" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -104,7 +102,6 @@
       <img id="previewImg" alt="Podgląd etykiety">
     </div>
 
-    <!-- Wykryte dane sprzętu -->
     <div class="card">
       <div class="field">
         <label>Model / Urządzenie</label>
@@ -127,10 +124,13 @@
     </div>
   </div>
 
-  <!-- Ustawienia awaryjne URL -->
   <div id="settingsModal">
     <div class="card" style="width: 100%; max-width: 420px;">
       <h2 style="font-size: 1.1rem; color: #38bdf8;">Konfiguracja Webhooka</h2>
+      <div class="field">
+        <label>Klucz API Gemini:</label>
+        <input type="password" id="geminiApiKey" placeholder="AIzaSy...">
+      </div>
       <div class="field">
         <label>URL Google Apps Script:</label>
         <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
@@ -142,6 +142,7 @@
 
   <script>
     const DEFAULT_GAS_URL = "https://script.google.com/a/macros/dmtholding.com/s/AKfycbw6dWKVIFwsbsfCoLi6qsfSbLPrr94ABkPljRk8meiRuX3gtbeFE9_iLiHnTDEoefymPQ/exec";
+    const GEMINI_MODEL_VERSION = "gemini-2.5-flash"; // W razie problemów zmień na "gemini-1.5-flash"
 
     const fileInput = document.getElementById('fileInput');
     const previewImg = document.getElementById('previewImg');
@@ -150,13 +151,14 @@
     const clientField = document.getElementById('clientField');
     const keepClientCheckbox = document.getElementById('keepClientCheckbox');
     const scriptUrlInput = document.getElementById('scriptUrlInput');
+    const geminiApiKeyInput = document.getElementById('geminiApiKey');
 
-    function getGasUrl() {
-      return localStorage.getItem('gas_url') || DEFAULT_GAS_URL;
-    }
+    function getGasUrl() { return localStorage.getItem('gas_url') || DEFAULT_GAS_URL; }
+    function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
 
     window.onload = () => {
       scriptUrlInput.value = getGasUrl();
+      geminiApiKeyInput.value = getApiKey();
       clientField.value = localStorage.getItem('last_client') || '';
     };
 
@@ -166,10 +168,13 @@
 
     function saveCustomUrl() {
       const url = scriptUrlInput.value.trim();
-      if (!url) return alert('Podaj poprawny URL.');
+      const apiKey = geminiApiKeyInput.value.trim();
+      if (!url || !apiKey) return alert('Wypełnij oba pola.');
+      
       localStorage.setItem('gas_url', url);
+      localStorage.setItem('gemini_api_key', apiKey);
       toggleSettings(false);
-      showStatus('Adres URL zapisany!', 'status-success');
+      showStatus('Konfiguracja zapisana!', 'status-success');
     }
 
     function showStatus(text, className) {
@@ -182,6 +187,12 @@
       const file = e.target.files[0];
       if (!file) return;
 
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        toggleSettings(true);
+        return alert('Najpierw skonfiguruj klucz Gemini API.');
+      }
+
       showStatus('Kompresowanie zdjęcia...', 'status-info');
       const base64Image = await resizeAndConvertImage(file);
 
@@ -189,7 +200,7 @@
       previewImg.style.display = 'block';
 
       showStatus('AI analizuje etykietę magazynową...', 'status-info');
-      analyzeImage(base64Image);
+      analyzeImageLocally(base64Image, apiKey);
     });
 
     function resizeAndConvertImage(file) {
@@ -223,20 +234,41 @@
       });
     }
 
-    async function analyzeImage(base64Image) {
+    async function analyzeImageLocally(base64Image, apiKey) {
+      const prompt = `Jesteś precyzyjnym skanerem OCR dla logistyki magazynowej. 
+Przeanalizuj etykietę i wyodrębnij:
+- model (dokładny model/nazwa sprzętu, np. AY-K6255)
+- serial (numer seryjny, S/N, np. 053624393628)
+- mac (adres fizyczny MAC, zamień na format z dwukropkami XX:XX:XX:XX:XX:XX)
+- extra (inne parametry: Part Number, P/N, rewizja, zasilanie)
+
+Zwróć TYLKO poprawny format JSON wg schematu:
+{"model": "", "serial": "", "mac": "", "extra": ""}`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_VERSION}:generateContent?key=${apiKey}`;
+
       try {
-        const response = await fetch(getGasUrl(), {
+        const response = await fetch(endpoint, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'analyze',
-            image: base64Image
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+              ]
+            }],
+            generationConfig: { response_mime_type: "application/json" }
           })
         });
 
-        const res = await response.json();
-        if (res.status !== 'success') throw new Error(res.error || 'Nieznany błąd serwera');
+        const result = await response.json();
+        if (result.error) throw new Error(result.error.message);
 
-        const parsed = res.data;
+        let rawText = result.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(rawText);
+
         document.getElementById('modelField').value = parsed.model || '';
         document.getElementById('serialField').value = parsed.serial || '';
         document.getElementById('macField').value = parsed.mac || '';
@@ -251,8 +283,11 @@
     }
 
     async function saveToSheets() {
+      const scriptUrl = getGasUrl();
+      if (!scriptUrl) return alert('Brak adresu URL do arkusza Google.');
+
       saveBtn.disabled = true;
-      showStatus('Zapisywanie w arkuszu...', 'status-info');
+      showStatus('Wysyłanie danych do arkusza...', 'status-info');
 
       const clientVal = clientField.value.trim();
       if (keepClientCheckbox.checked && clientVal) {
@@ -260,7 +295,7 @@
       }
 
       const payload = {
-        action: 'save',
+        action: 'save', // Mówimy skryptowi, że to proste zapisywanie
         client: clientVal,
         model: document.getElementById('modelField').value,
         serial: document.getElementById('serialField').value,
@@ -269,13 +304,13 @@
       };
 
       try {
-        const response = await fetch(getGasUrl(), {
+        // Kluczowe użycie 'no-cors' dla ominięcia blokad w Google Workspace
+        await fetch(scriptUrl, {
           method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-
-        const res = await response.json();
-        if (res.status !== 'success') throw new Error(res.error || 'Błąd zapisu');
 
         showStatus('Pomyślnie dodano wiersz do Arkusza!', 'status-success');
 
@@ -292,10 +327,10 @@
             clientField.value = '';
             localStorage.removeItem('last_client');
           }
-        }, 1800);
+        }, 2000);
 
       } catch (err) {
-        showStatus('Błąd zapisu: ' + err.message, 'status-error');
+        showStatus('Błąd zapisu do arkusza: ' + err.message, 'status-error');
         saveBtn.disabled = false;
       }
     }
