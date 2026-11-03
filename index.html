@@ -2,77 +2,43 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Skaner Magazynowy AI</title>
   <style>
     :root {
-      --primary: #0284c7;
-      --primary-hover: #0369a1;
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --border: #334155;
-      --success: #16a34a;
-      --error: #dc2626;
-      --accent: #38bdf8;
+      --primary: #0284c7; --primary-hover: #0369a1; --bg: #0f172a; --card-bg: #1e293b;
+      --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+      --success: #16a34a; --error: #dc2626; --accent: #38bdf8;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
     .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-
     header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
     h1 { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
     .settings-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
-
-    .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-
-    .camera-trigger {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      border: 2px dashed var(--accent); border-radius: 10px; padding: 22px; cursor: pointer;
-      background: rgba(56, 189, 248, 0.05); text-align: center; gap: 8px;
-    }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .camera-trigger { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--accent); border-radius: 10px; padding: 22px; cursor: pointer; background: rgba(56,189,248,.05); text-align: center; gap: 8px; }
     .camera-trigger span { font-weight: 600; color: var(--accent); font-size: 1.1rem; }
     .camera-trigger small { color: var(--text-muted); font-size: 0.8rem; }
     #fileInput { display: none; }
-
-    #previewImg { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; display: none; background: #000; }
-
+    #previewImg { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; display: none; background: #000; }
     .field { display: flex; flex-direction: column; gap: 4px; }
-    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    input, textarea {
-      background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px;
-      color: var(--text); font-size: 1rem; width: 100%;
-    }
+    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+    input, textarea { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: var(--text); font-size: 1rem; width: 100%; }
     input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-
-    .checkbox-row {
-      display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;
-    }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; }
     .checkbox-row input { width: auto; cursor: pointer; }
-
-    .btn {
-      background: var(--primary); color: white; border: none; border-radius: 8px;
-      padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center;
-      transition: background 0.2s;
-    }
+    .btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; transition: background .2s; }
     .btn:active { background: var(--primary-hover); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
     #status { font-size: 0.9rem; text-align: center; padding: 10px; border-radius: 6px; display: none; word-break: break-word; }
-    .status-info { background: #0369a1; color: white; }
-    .status-success { background: var(--success); color: white; }
-    .status-error { background: var(--error); color: white; }
-
-    #settingsModal {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-      display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100;
-    }
+    .status-info { background: #0369a1; color: #fff; }
+    .status-success { background: var(--success); color: #fff; }
+    .status-error { background: var(--error); color: #fff; }
+    #settingsModal { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
   </style>
 </head>
 <body>
-
   <div class="container">
     <header>
       <h1>Skaner Magazynowy</h1>
@@ -83,7 +49,7 @@
 
     <div class="card">
       <div class="field">
-        <label>Klient / Zamówienie docelowe</label>
+        <label for="clientField">Klient / Zamówienie docelowe</label>
         <input type="text" id="clientField" placeholder="np. Firma ABC / ZAM-2026-001">
       </div>
       <label class="checkbox-row">
@@ -93,7 +59,7 @@
     </div>
 
     <div class="card">
-      <label for="fileInput" class="camera-trigger" id="triggerArea">
+      <label for="fileInput" class="camera-trigger">
         <svg width="32" height="32" fill="none" stroke="#38bdf8" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         <span>Zrób zdjęcie etykiety</span>
         <small>Aparat uruchomi się automatycznie</small>
@@ -104,233 +70,169 @@
 
     <div class="card">
       <div class="field">
-        <label>Model / Urządzenie</label>
+        <label for="modelField">Model / Urządzenie</label>
         <input type="text" id="modelField" placeholder="Wykryty model">
       </div>
       <div class="field">
-        <label>Numer Seryjny (S/N)</label>
+        <label for="serialField">Numer Seryjny (S/N)</label>
         <input type="text" id="serialField" placeholder="Wykryty S/N">
       </div>
       <div class="field">
-        <label>Adres MAC</label>
+        <label for="macField">Adres MAC</label>
         <input type="text" id="macField" placeholder="XX:XX:XX:XX:XX:XX">
       </div>
       <div class="field">
-        <label>Dodatkowe informacje (P/N, Part No, Uwagi)</label>
+        <label for="extraField">Dodatkowe informacje (P/N, Part No, Uwagi)</label>
         <textarea id="extraField" rows="2" placeholder="Pozostałe parametry"></textarea>
       </div>
-
       <button id="saveBtn" class="btn" onclick="saveToSheets()" disabled>Zapisz w Arkuszu Google</button>
     </div>
   </div>
 
   <div id="settingsModal">
-    <div class="card" style="width: 100%; max-width: 420px;">
-      <h2 style="font-size: 1.1rem; color: #38bdf8;">Konfiguracja Webhooka</h2>
+    <div class="card" style="width:100%;max-width:420px;">
+      <h2 style="font-size:1.1rem;color:#38bdf8;">Ustawienia</h2>
       <div class="field">
-        <label>Klucz API Gemini:</label>
-        <input type="password" id="geminiApiKey" placeholder="AIzaSy...">
-      </div>
-      <div class="field">
-        <label>URL Google Apps Script:</label>
+        <label for="scriptUrlInput">URL Google Apps Script (/exec)</label>
         <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
       </div>
-      <button class="btn" onclick="saveCustomUrl()">Zapisz</button>
-      <button class="settings-btn" style="border: none; margin-top: 4px;" onclick="toggleSettings(false)">Zamknij</button>
+      <small style="color:#94a3b8">Klucz Gemini nie jest już potrzebny w aplikacji – jest przechowywany w Apps Script.</small>
+      <button class="btn" onclick="saveSettings()">Zapisz</button>
+      <button class="settings-btn" style="border:none;" onclick="toggleSettings(false)">Zamknij</button>
     </div>
   </div>
 
   <script>
-    const DEFAULT_GAS_URL = "https://script.google.com/a/macros/dmtholding.com/s/AKfycbw6dWKVIFwsbsfCoLi6qsfSbLPrr94ABkPljRk8meiRuX3gtbeFE9_iLiHnTDEoefymPQ/exec";
-    const GEMINI_MODEL_VERSION = "gemini-2.5-flash"; // W razie problemów zmień na "gemini-1.5-flash"
+    // URL w formie /macros/s/<ID>/exec (BEZ /a/macros/domena/), wdrożenie: dostęp "Anyone"
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbymCX6LWnN7MDzrfGMMlBc2gAn8tbUYnshA8Pp9XinmUUDp12gqw-NLmZanNxhBvvqW-A/exec";
+    const URL_KEY = 'gas_url_v3'; // nowy klucz – ignoruje stare, błędne wpisy z localStorage
 
-    const fileInput = document.getElementById('fileInput');
-    const previewImg = document.getElementById('previewImg');
-    const saveBtn = document.getElementById('saveBtn');
-    const statusDiv = document.getElementById('status');
-    const clientField = document.getElementById('clientField');
-    const keepClientCheckbox = document.getElementById('keepClientCheckbox');
-    const scriptUrlInput = document.getElementById('scriptUrlInput');
-    const geminiApiKeyInput = document.getElementById('geminiApiKey');
+    const $ = (id) => document.getElementById(id);
+    const fileInput = $('fileInput'), previewImg = $('previewImg'), saveBtn = $('saveBtn'),
+          statusDiv = $('status'), clientField = $('clientField'),
+          keepClientCheckbox = $('keepClientCheckbox'), scriptUrlInput = $('scriptUrlInput');
 
-    function getGasUrl() { return localStorage.getItem('gas_url') || DEFAULT_GAS_URL; }
-    function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+    function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+    function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+    function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
 
-    window.onload = () => {
+    function getGasUrl() { return lsGet(URL_KEY) || DEFAULT_GAS_URL; }
+
+    window.addEventListener('load', () => {
       scriptUrlInput.value = getGasUrl();
-      geminiApiKeyInput.value = getApiKey();
-      clientField.value = localStorage.getItem('last_client') || '';
-    };
+      clientField.value = lsGet('last_client') || '';
+    });
 
-    function toggleSettings(show) {
-      document.getElementById('settingsModal').style.display = show ? 'flex' : 'none';
-    }
+    function toggleSettings(show) { $('settingsModal').style.display = show ? 'flex' : 'none'; }
 
-    function saveCustomUrl() {
+    function saveSettings() {
       const url = scriptUrlInput.value.trim();
-      const apiKey = geminiApiKeyInput.value.trim();
-      if (!url || !apiKey) return alert('Wypełnij oba pola.');
-      
-      localStorage.setItem('gas_url', url);
-      localStorage.setItem('gemini_api_key', apiKey);
+      if (!url) { lsDel(URL_KEY); } else { lsSet(URL_KEY, url); }
       toggleSettings(false);
-      showStatus('Konfiguracja zapisana!', 'status-success');
+      showStatus('Zapisano ustawienia.', 'status-success');
     }
 
-    function showStatus(text, className) {
-      statusDiv.className = className;
+    function showStatus(text, cls) {
+      statusDiv.className = cls;
       statusDiv.textContent = text;
       statusDiv.style.display = 'block';
+    }
+
+    // Wywołanie Apps Script: text/plain = "proste żądanie" bez preflightu CORS
+    async function callGas(payload) {
+      const res = await fetch(getGasUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); }
+      catch {
+        throw new Error('Skrypt zwrócił stronę zamiast JSON (prawdopodobnie logowanie). Wdróż skrypt z dostępem "Anyone" i użyj adresu /macros/s/.../exec.');
+      }
+      if (data.status !== 'success') throw new Error(data.error || 'Nieznany błąd skryptu');
+      return data;
     }
 
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        toggleSettings(true);
-        return alert('Najpierw skonfiguruj klucz Gemini API.');
-      }
-
+      saveBtn.disabled = true;
       showStatus('Kompresowanie zdjęcia...', 'status-info');
-      const base64Image = await resizeAndConvertImage(file);
 
-      previewImg.src = 'data:image/jpeg;base64,' + base64Image;
-      previewImg.style.display = 'block';
+      try {
+        const base64Image = await resizeAndConvertImage(file);
+        previewImg.src = 'data:image/jpeg;base64,' + base64Image;
+        previewImg.style.display = 'block';
 
-      showStatus('AI analizuje etykietę magazynową...', 'status-info');
-      analyzeImageLocally(base64Image, apiKey);
+        showStatus('AI analizuje etykietę...', 'status-info');
+        const res = await callGas({ action: 'analyze', image: base64Image });
+
+        $('modelField').value = res.data.model || '';
+        $('serialField').value = res.data.serial || '';
+        $('macField').value = res.data.mac || '';
+        $('extraField').value = res.data.extra || '';
+
+        showStatus('Dane odczytane! Sprawdź poprawność i kliknij Zapisz.', 'status-success');
+      } catch (err) {
+        showStatus('Błąd odczytu AI: ' + err.message, 'status-error');
+      } finally {
+        saveBtn.disabled = false; // można wpisać/poprawić ręcznie
+      }
     });
 
     function resizeAndConvertImage(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxDim = 1200;
-
-            if (width > height && width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1]);
-          };
-          img.src = e.target.result;
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1400;
+          let w = img.naturalWidth, h = img.naturalHeight;
+          const scale = Math.min(1, maxDim / Math.max(w, h));
+          w = Math.round(w * scale); h = Math.round(h * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Nie można wczytać zdjęcia.')); };
+        img.src = url;
       });
     }
 
-    async function analyzeImageLocally(base64Image, apiKey) {
-      const prompt = `Jesteś precyzyjnym skanerem OCR dla logistyki magazynowej. 
-Przeanalizuj etykietę i wyodrębnij:
-- model (dokładny model/nazwa sprzętu, np. AY-K6255)
-- serial (numer seryjny, S/N, np. 053624393628)
-- mac (adres fizyczny MAC, zamień na format z dwukropkami XX:XX:XX:XX:XX:XX)
-- extra (inne parametry: Part Number, P/N, rewizja, zasilanie)
-
-Zwróć TYLKO poprawny format JSON wg schematu:
-{"model": "", "serial": "", "mac": "", "extra": ""}`;
-
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_VERSION}:generateContent?key=${apiKey}`;
-
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: prompt },
-                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-              ]
-            }],
-            generationConfig: { response_mime_type: "application/json" }
-          })
-        });
-
-        const result = await response.json();
-        if (result.error) throw new Error(result.error.message);
-
-        let rawText = result.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(rawText);
-
-        document.getElementById('modelField').value = parsed.model || '';
-        document.getElementById('serialField').value = parsed.serial || '';
-        document.getElementById('macField').value = parsed.mac || '';
-        document.getElementById('extraField').value = parsed.extra || '';
-
-        saveBtn.disabled = false;
-        showStatus('Dane odczytane! Sprawdź poprawność i kliknij Zapisz.', 'status-success');
-      } catch (err) {
-        showStatus('Błąd odczytu: ' + err.message, 'status-error');
-        saveBtn.disabled = false;
-      }
-    }
-
     async function saveToSheets() {
-      const scriptUrl = getGasUrl();
-      if (!scriptUrl) return alert('Brak adresu URL do arkusza Google.');
-
       saveBtn.disabled = true;
       showStatus('Wysyłanie danych do arkusza...', 'status-info');
 
       const clientVal = clientField.value.trim();
-      if (keepClientCheckbox.checked && clientVal) {
-        localStorage.setItem('last_client', clientVal);
-      }
-
-      const payload = {
-        action: 'save', // Mówimy skryptowi, że to proste zapisywanie
-        client: clientVal,
-        model: document.getElementById('modelField').value,
-        serial: document.getElementById('serialField').value,
-        mac: document.getElementById('macField').value,
-        extra: document.getElementById('extraField').value
-      };
+      if (keepClientCheckbox.checked && clientVal) lsSet('last_client', clientVal);
 
       try {
-        // Kluczowe użycie 'no-cors' dla ominięcia blokad w Google Workspace
-        await fetch(scriptUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
+        await callGas({
+          action: 'save',
+          client: clientVal,
+          model: $('modelField').value,
+          serial: $('serialField').value,
+          mac: $('macField').value,
+          extra: $('extraField').value
         });
 
         showStatus('Pomyślnie dodano wiersz do Arkusza!', 'status-success');
 
         setTimeout(() => {
-          document.getElementById('modelField').value = '';
-          document.getElementById('serialField').value = '';
-          document.getElementById('macField').value = '';
-          document.getElementById('extraField').value = '';
+          ['modelField', 'serialField', 'macField', 'extraField'].forEach(id => $(id).value = '');
           previewImg.style.display = 'none';
           fileInput.value = '';
           statusDiv.style.display = 'none';
-
-          if (!keepClientCheckbox.checked) {
-            clientField.value = '';
-            localStorage.removeItem('last_client');
-          }
-        }, 2000);
-
+          if (!keepClientCheckbox.checked) { clientField.value = ''; lsDel('last_client'); }
+          saveBtn.disabled = true;
+        }, 1500);
       } catch (err) {
-        showStatus('Błąd zapisu do arkusza: ' + err.message, 'status-error');
+        showStatus('Błąd zapisu: ' + err.message, 'status-error');
         saveBtn.disabled = false;
       }
     }
