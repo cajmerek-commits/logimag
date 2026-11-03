@@ -127,7 +127,7 @@
     </div>
   </div>
 
-  <!-- Ustawienia URL (opcjonalne, w razie zmiany adresu) -->
+  <!-- Ustawienia awaryjne URL -->
   <div id="settingsModal">
     <div class="card" style="width: 100%; max-width: 420px;">
       <h2 style="font-size: 1.1rem; color: #38bdf8;">Konfiguracja Webhooka</h2>
@@ -141,11 +141,7 @@
   </div>
 
   <script>
-    // =========================================================================
-    // WPISZ TUTAJ SWÓJ ADRES Z APPS SCRIPT RAZ NA GITHUBIE:
-    // =========================================================================
     const DEFAULT_GAS_URL = "https://script.google.com/a/macros/dmtholding.com/s/AKfycbw6dWKVIFwsbsfCoLi6qsfSbLPrr94ABkPljRk8meiRuX3gtbeFE9_iLiHnTDEoefymPQ/exec";
-    // =========================================================================
 
     const fileInput = document.getElementById('fileInput');
     const previewImg = document.getElementById('previewImg');
@@ -162,11 +158,6 @@
     window.onload = () => {
       scriptUrlInput.value = getGasUrl();
       clientField.value = localStorage.getItem('last_client') || '';
-
-      if (getGasUrl() === "TUTAJ_WKLEJ_SWOJ_URL_APPS_SCRIPT") {
-        toggleSettings(true);
-        showStatus('Wklej adres Web App w Ustawieniach lub w kodzie HTML.', 'status-error');
-      }
     };
 
     function toggleSettings(show) {
@@ -190,12 +181,6 @@
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
-      const url = getGasUrl();
-      if (!url || url === "TUTAJ_WKLEJ_SWOJ_URL_APPS_SCRIPT") {
-        toggleSettings(true);
-        return alert('Najpierw skonfiguruj adres skryptu w Ustawieniach.');
-      }
 
       showStatus('Kompresowanie zdjęcia...', 'status-info');
       const base64Image = await resizeAndConvertImage(file);
