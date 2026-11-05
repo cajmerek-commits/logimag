@@ -31,8 +31,10 @@ nav button.on{color:var(--ac);font-weight:700}
 
 <div class="tab on" id="t0">
 <div class="card"><label>Dok. przyjęcia (WZ / faktura dostawcy)</label><input id="dokPrz"></div>
-<div class="card"><label for="fi" class="cam">📷 Zrób zdjęcie etykiety</label>
-<input type="file" id="fi" accept="image/*" capture="environment" hidden><img id="pv"></div>
+<div class="card"><div style="display:flex;gap:8px">
+<label for="fi" class="cam" style="flex:1">📷 Aparat</label><label for="fg" class="cam" style="flex:1">🖼️ Z galerii</label></div>
+<input type="file" id="fi" accept="image/*" capture="environment" hidden>
+<input type="file" id="fg" accept="image/*" hidden><img id="pv"></div>
 <div class="card">
 <label>Producent</label><input id="producent"><label>Model</label><input id="model" list="ml">
 <datalist id="ml"></datalist><label>S/N (zapisze się ostatnie 6 znaków)</label><input id="sn">
@@ -81,16 +83,17 @@ function tab(n,b){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.t
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b))}
 
 function img(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();
-  i.onload=()=>{const k=Math.min(1,1400/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
+  i.onload=()=>{const k=Math.min(1,1100/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);
-  URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.85).split(',')[1])};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
+  URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.8).split(',')[1])};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
 $('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   let n=0,iv;try{st('Odczyt etykiety… 0 s','i');iv=setInterval(()=>st('Odczyt etykiety… '+(++n)+' s','i'),1000);const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
-    const d=(await api('analyze',{image:b})).data;
+    const r=await api('analyze',{image:b}),d=r.data;
     $('producent').value=d.producent||'';$('model').value=d.model||'';$('sn').value=d.serial||'';
     $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';$('opt').value=d.option||'';
-    clearInterval(iv);st('Sprawdź dane (zwłaszcza S/N) i zapisz.','s')}catch(x){clearInterval(iv);st('Błąd odczytu: '+x.message,'e')}};
-function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';st('')}
+    clearInterval(iv);st(`Sprawdź dane (zwłaszcza S/N) i zapisz. [${(r.ms/1000).toFixed(1)} s · ${r.model}]`,'s')}catch(x){clearInterval(iv);st('Błąd odczytu: '+x.message,'e')}};
+$('fg').onchange=$('fi').onchange;
+function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';$('fg').value='';st('')}
 async function add(force){
   const d={dokPrz:$('dokPrz').value.trim(),force:force===true};F.forEach(k=>d[k]=$(k).value.trim());
   ls('dokPrz',d.dokPrz);if(!d.sn)return st('Wpisz S/N.','e');
