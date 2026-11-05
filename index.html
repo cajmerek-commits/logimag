@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Magazyn</title>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js" defer></script>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--tx:#f8fafc;--mu:#94a3b8;--bd:#334155;--ac:#38bdf8;--pr:#0284c7}
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -11,22 +12,26 @@ h1{font-size:1.2rem;color:var(--ac)}
 label{font-size:.75rem;font-weight:600;color:var(--mu);text-transform:uppercase}
 input,select,textarea{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:10px;color:var(--tx);font-size:1rem;width:100%}
 .b{background:var(--pr);color:#fff;border:0;border-radius:8px;padding:13px;font-size:1rem;font-weight:600;cursor:pointer}
-.b.g{background:#475569}.b.o{background:#16a34a}.b:disabled{opacity:.5}
+.b.g{background:#475569}.b.o{background:#16a34a}.b:disabled{opacity:.5;cursor:not-allowed}
 .cam{border:2px dashed var(--ac);border-radius:10px;padding:18px;text-align:center;color:var(--ac);font-weight:600;cursor:pointer}
+.ib{display:flex;gap:8px;align-items:stretch}
+.scb{background:var(--bg);border:1px solid var(--ac);color:var(--ac);border-radius:6px;padding:0 14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;flex-shrink:0;text-transform:none}
+.pick-list{display:flex;flex-direction:column;gap:6px}
+.pick-list:empty{display:none}
 #st{display:none;padding:10px;border-radius:6px;text-align:center;word-break:break-word;font-size:.9rem}
 .i{background:#0369a1}.s{background:#16a34a}.e{background:#dc2626}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd)}
 nav button{flex:1;padding:16px;background:none;border:0;color:var(--mu);font-size:1rem}
 nav button.on{color:var(--ac);font-weight:700}
 .tab{display:none;flex-direction:column;gap:12px}.tab.on{display:flex}
-.r{padding:10px;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.9rem}
-.r button{background:#475569;color:#fff;border:0;border-radius:6px;padding:6px 10px;margin-left:6px}
-.r small{color:var(--mu);display:block}
+.r{padding:10px;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.9rem;word-break:break-word}
+.r button{background:#475569;color:#fff;border:0;border-radius:6px;padding:6px 10px;margin-left:6px;cursor:pointer}
+.r small{color:var(--mu);display:block;margin-top:2px}
 #lg{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
 #pv{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#000;display:none}
 </style></head><body>
 <div id="lg"><div class="card" style="width:100%;max-width:340px"><h1>Magazyn</h1><label>Hasło</label>
-<input type="password" id="pin" autocomplete="current-password"><button class="b" onclick="login()">Wejdź</button></div></div>
+<input type="password" id="pin" autocomplete="current-password"><button class="b" id="btnLg" onclick="login()">Wejdź</button></div></div>
 <div class="c">
 <h1>Skaner Magazynowy</h1><div id="st"></div>
 
@@ -37,7 +42,7 @@ nav button.on{color:var(--ac);font-weight:700}
 <input type="file" id="fi" accept="image/*" capture="environment" hidden>
 <input type="file" id="fg" accept="image/*" hidden>
 <label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:.85rem"><input type="checkbox" id="useAI" checked style="width:auto"> Czytaj też przez AI (model, P/N, Option…)</label>
-<img id="pv"><div id="codes" style="display:flex;flex-direction:column;gap:6px"></div></div>
+<img id="pv"><div id="codes" class="pick-list"></div></div>
 <div class="card">
 <label>Producent</label><input id="producent"><label>Model</label><input id="model" list="ml">
 <datalist id="ml"></datalist><label>S/N (zapisze się ostatnie 6 znaków)</label><input id="sn">
@@ -47,17 +52,41 @@ nav button.on{color:var(--ac);font-weight:700}
 <button class="b g" onclick="clr()">Wyczyść</button></div></div>
 
 <div class="tab" id="t1">
-<div class="card"><label>S/N (wystarczy ostatnie 6 znaków)</label><input id="wsn"><button class="b" onclick="find()">Znajdź</button><div id="kt"></div></div>
+<div class="card">
+<label>S/N (wystarczy ostatnie 6 znaków)</label>
+<div class="ib">
+  <input id="wsn" placeholder="Wpisz lub zeskanuj S/N…">
+  <label for="fWsn" class="scb" title="Skanuj S/N aparatem">📷</label>
+</div>
+<input type="file" id="fWsn" accept="image/*" capture="environment" hidden>
+<div id="cWsn" class="pick-list"></div>
+<button class="b" id="btnFind" onclick="find()">Znajdź</button>
+<div id="kt"></div></div>
+
 <div class="card" id="wf" style="display:none">
 <label>Klient</label><input id="klient"><label>Dok. wydania (WZ / faktura)</label><input id="dokWyd">
 <label>Handlowiec</label><input id="handlowiec">
-<button class="b g" onclick="act('Zarezerwowany')">Zarezerwuj</button>
+<button class="b g" id="btnRes" onclick="act('Zarezerwowany')">Zarezerwuj</button>
 <label>Kurier</label><select id="kurier"><option></option><option>DHL</option><option>DPD</option><option>InPost</option><option>UPS</option><option>FedEx</option><option>Odbiór osobisty</option></select>
-<label>Nr listu przewozowego</label><input id="list">
-<button class="b o" onclick="act('Wysłany')">Wyślij</button></div></div>
+<label>Nr listu przewozowego</label>
+<div class="ib">
+  <input id="list" placeholder="Wpisz lub zeskanuj list…">
+  <label for="fList" class="scb" title="Skanuj list przewozowy">📷</label>
+</div>
+<input type="file" id="fList" accept="image/*" capture="environment" hidden>
+<div id="cList" class="pick-list"></div>
+<button class="b o" id="btnSend" onclick="act('Wysłany')">Wyślij</button></div></div>
 
-<div class="tab" id="t2"><div class="card"><label>Szukaj (S/N, MAC, klient, WZ, model…)</label>
-<input id="q"><button class="b" onclick="srch()">Szukaj</button></div><div id="res" style="display:flex;flex-direction:column;gap:8px"></div></div>
+<div class="tab" id="t2"><div class="card">
+<label>Szukaj (S/N, MAC, klient, WZ, model…)</label>
+<div class="ib">
+  <input id="q" placeholder="Wpisz frazę lub zeskanuj kod…">
+  <label for="fQ" class="scb" title="Skanuj kod do wyszukania">📷</label>
+</div>
+<input type="file" id="fQ" accept="image/*" capture="environment" hidden>
+<div id="cQ" class="pick-list"></div>
+<button class="b" id="btnSrch" onclick="srch()">Szukaj</button></div>
+<div id="res" style="display:flex;flex-direction:column;gap:8px"></div></div>
 </div>
 <nav><button class="on" onclick="tab(0,this)">Przyjęcie</button><button onclick="tab(1,this)">Wydanie</button><button onclick="tab(2,this)">Szukaj</button></nav>
 
@@ -69,6 +98,7 @@ let PIN=ls('pin2')||'';
 const F=['producent','model','sn','mac','pn','fw','opt','uwagi'];
 
 function st(t,c){const s=$('st');s.className=c;s.textContent=t;s.style.display=t?'block':'none'}
+
 async function api(a,d={}){
   const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),90000);let t;
   try{const r=await fetch(URL_,{method:'POST',signal:ac.signal,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,action:a,pin:PIN})});t=await r.text()}
@@ -78,25 +108,46 @@ async function api(a,d={}){
   try{j=JSON.parse(t)}catch{throw new Error('Skrypt zwrócił stronę zamiast JSON – sprawdź wdrożenie (dostęp: Anyone).')}
   if(j.status==='badpin'){PIN='';ls('pin2','');$('lg').style.display='flex';throw new Error('Złe hasło')}
   if(j.status==='error')throw new Error(j.error);return j}
-async function login(){PIN=$('pin').value.trim();
-  try{const r=await api('ping');ls('pin2',PIN);$('lg').style.display='none';st('');$('ml').innerHTML=r.models.map(m=>`<option value="${m}">`).join('')}
-  catch(e){alert(e.message)}}
-window.onload=()=>{$('dokPrz').value=ls('dokPrz')||'';PIN?login():$('lg').style.display='flex'};
-function tab(n,b){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i==n));
-  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b))}
+
+async function login(){
+  PIN=$('pin').value.trim();if(!PIN)return;
+  $('btnLg').disabled=true;
+  try{
+    const r=await api('ping');ls('pin2',PIN);$('lg').style.display='none';st('');
+    const ml=$('ml');ml.innerHTML='';
+    (r.models||[]).forEach(m=>{const o=document.createElement('option');o.value=m;ml.appendChild(o)});
+  }catch(e){alert(e.message)}
+  finally{$('btnLg').disabled=false}
+}
+
+window.onload=()=>{
+  $('dokPrz').value=ls('dokPrz')||'';
+  $('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+  $('wsn').addEventListener('keydown',e=>{if(e.key==='Enter')find()});
+  $('q').addEventListener('keydown',e=>{if(e.key==='Enter')srch()});
+  PIN?login():$('lg').style.display='flex';
+};
+
+function tab(n,b){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i==n));
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b));
+}
 
 function toCanvas(file,max){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();
   i.onload=()=>{const k=Math.min(1,max/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);
-  URL.revokeObjectURL(u);ok(c)};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
+  URL.revokeObjectURL(u);ok(c)};i.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Nie można wczytać zdjęcia'))};i.src=u})}
+
 function scaled(c,max){const k=Math.min(1,max/Math.max(c.width,c.height)),d=document.createElement('canvas');
   d.width=Math.round(c.width*k);d.height=Math.round(c.height*k);d.getContext('2d').drawImage(c,0,0,d.width,d.height);
   return d.toDataURL('image/jpeg',.8).split(',')[1]}
 
 // ---- odczyt kodów kreskowych i QR (lokalnie w telefonie) ----
 function loadZX(){return new Promise((ok,no)=>{if(window.ZXing)return ok();const s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=ok;s.onerror=()=>no(new Error('zxing'));document.head.appendChild(s)})}
+  s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=ok;s.onerror=()=>no(new Error('Brak biblioteki skanera (sprawdź internet)'));document.head.appendChild(s)})}
+
 const TILES=[[0,0,1,1],[0,0,1,.34],[0,.33,1,.34],[0,.66,1,.34],[0,0,1,.5],[0,.5,1,.5],[0,0,.5,1],[.5,0,.5,1],[0,0,.6,.6],[.4,0,.6,.6],[0,.4,.6,.6],[.4,.4,.6,.6]];
+
 async function decodeCodes(cv){
   const out=new Set();
   if('BarcodeDetector' in window){try{const fm=await BarcodeDetector.getSupportedFormats(),d=new BarcodeDetector({formats:fm});
@@ -107,8 +158,10 @@ async function decodeCodes(cv){
       try{out.add(rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(tc)))).getText().trim())}catch(e){}
       await new Promise(r=>setTimeout(r))}}catch(e){}
   return{codes:[...out],engine:'ZXing'}}
+
 const HEX12=/^[0-9a-f]{12}$/i;
 function macFmt(v){const c=String(v).replace(/[^0-9a-f]/gi,'');return c.length===12?c.match(/../g).join(':').toUpperCase():v}
+
 function classify(codes){
   const c=codes.filter(x=>x&&!/^REL-/i.test(x)&&!/^\d{13}$/.test(x)&&!/^https?:/i.test(x));
   let mac=c.find(x=>/^([0-9a-f]{2}[:\-]){5}[0-9a-f]{2}$/i.test(x)),sn='';
@@ -116,11 +169,49 @@ function classify(codes){
   if(oth.length){sn=oth.sort((a,b)=>b.length-a.length)[0];if(!mac&&hex.length)mac=hex[0]}
   else{sn=hex[0]||'';if(!mac&&hex.length>1)mac=hex[1]}
   return{sn,mac:mac||''}}
+
+// Uniwersalny szybki skaner dla pól w Wydaniu, Kurierze i Szukaj
+async function quickScan(fileInput, targetInputId, listBoxId, afterPick, preferSn=true){
+  const f=fileInput.files[0];if(!f)return;
+  fileInput.value='';
+  const box=$(listBoxId);box.innerHTML='';
+  try{
+    st('Czytanie kodu ze zdjęcia…','i');
+    const cv=await toCanvas(f,1600),dr=await decodeCodes(cv),codes=dr.codes;
+    if(!codes.length){st('Nie znaleziono kodu na zdjęciu – spróbuj bliżej lub wpisz ręcznie.','e');return}
+    if(codes.length===1){
+      $(targetInputId).value=codes[0];
+      st('Odczytano: '+codes[0],'s');
+      if(afterPick)afterPick();
+      return;
+    }
+    const g=preferSn?classify(codes):{sn:''};
+    const best=g.sn||codes[0];
+    $(targetInputId).value=best;
+    st(`Wykryto ${codes.length} kody – wybrano: ${best} (lub kliknij inny poniżej).`,'s');
+    codes.forEach(v=>{
+      const d=document.createElement('div');d.className='r';
+      d.textContent=v;
+      d.onclick=()=>{$(targetInputId).value=v;box.innerHTML='';st('Wybrano: '+v,'s');if(afterPick)afterPick()};
+      box.appendChild(d);
+    });
+    if(afterPick)afterPick();
+  }catch(x){st('Błąd skanowania: '+x.message,'e')}
+}
+
+$('fWsn').onchange=function(){quickScan(this,'wsn','cWsn',find,true)};
+$('fList').onchange=function(){quickScan(this,'list','cList',null,false)};
+$('fQ').onchange=function(){quickScan(this,'q','cQ',srch,true)};
+
 function showCodes(codes){const b=$('codes');b.innerHTML='';
-  codes.forEach(v=>{const d=document.createElement('div');d.className='r';d.textContent=v;
-    [['S/N',()=>$('sn').value=v],['MAC',()=>$('mac').value=macFmt(v)]].forEach(([t,f])=>{const x=document.createElement('button');x.textContent=t;x.onclick=f;d.appendChild(x)});b.appendChild(d)})}
+  codes.forEach(v=>{const d=document.createElement('div');d.className='r';
+    const sp=document.createElement('span');sp.textContent=v;d.appendChild(sp);
+    [['S/N',()=>$('sn').value=v],['MAC',()=>$('mac').value=macFmt(v)]].forEach(([t,fn])=>{
+      const x=document.createElement('button');x.textContent=t;x.onclick=fn;d.appendChild(x)});
+    b.appendChild(d)})}
+
 const l6=s=>String(s||'').replace(/\s+/g,'').toUpperCase().slice(-6);
-let aiBusy=false;
+let aiBusy=false,saveBusy=false,actBusy=false;
 
 const onPick=async e=>{const f=e.target.files[0];if(!f)return;
   F.forEach(k=>$(k).value='');$('codes').innerHTML='';const t0=Date.now();let ai=null;
@@ -141,41 +232,86 @@ const onPick=async e=>{const f=e.target.files[0];if(!f)return;
         :st(`Gotowe. Sprawdź S/N i zapisz. [kody ${tc} s · AI ${(r.ms/1000).toFixed(1)} s]`,'s')
   }catch(x){st('Błąd: '+x.message,'e')}};
 $('fi').onchange=onPick;$('fg').onchange=onPick;
+
 function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';$('fg').value='';$('codes').innerHTML='';st('')}
+
 async function add(force){
+  if(saveBusy)return;
   if(aiBusy&&!confirm('AI jeszcze czyta etykietę (model, P/N…). Zapisać bez tych danych?'))return;
   const d={dokPrz:$('dokPrz').value.trim(),force:force===true};F.forEach(k=>d[k]=$(k).value.trim());
   ls('dokPrz',d.dokPrz);if(!d.sn)return st('Wpisz S/N.','e');
+  saveBusy=true;$('sv').disabled=true;
   try{st('Zapisywanie…','i');const r=await api('add',d);
     if(r.status==='duplicate'){st('');
+      saveBusy=false;$('sv').disabled=false;
       if(confirm(`S/N już jest w bazie (${r.row.model}, status: ${r.row.status}${r.row.klient?', klient: '+r.row.klient:''}).\nZapisać mimo to?`))return add(true);return}
-    st('Dodano do magazynu ✔','s');clr();st('Dodano do magazynu ✔','s')}catch(x){st('Błąd zapisu: '+x.message,'e')}}
+    clr();st('Dodano do magazynu ✔','s')}
+  catch(x){st('Błąd zapisu: '+x.message,'e')}
+  finally{saveBusy=false;$('sv').disabled=false}}
 
 let cur=null,found=[];
-function pick(i){cur=found[i];
-  $('kt').innerHTML=`<b>${cur.model}</b>${cur.opt?' ['+cur.opt+']':''} · S/N …${cur.sn}<br>Status: <b>${cur.status}</b>${cur.klient?' · '+cur.klient:''}`;
-  ['klient','dokWyd','handlowiec','kurier','list'].forEach(k=>$(k).value=cur[k]||'');$('wf').style.display='flex'}
-async function find(){const sn=$('wsn').value.trim();if(!sn)return;
-  try{st('Szukanie…','i');const r=await api('find',{sn});st('');found=r.rows;cur=null;$('wf').style.display='none';
-    if(!found.length){$('kt').textContent='Nie ma takiego S/N w magazynie.';return}
+
+function renderItemRow(x, shortSn){
+  const d=document.createElement('div');d.className='r';
+  const b=document.createElement('b');b.textContent=x.model||'(brak modelu)';
+  d.appendChild(b);
+  d.appendChild(document.createTextNode(' · '+(shortSn?'…':'')+(x.sn||'')));
+  const sm=document.createElement('small');
+  const parts=[x.status,x.klient,shortSn?x.dokPrz:x.dokWyd,shortSn?null:x.mac].filter(Boolean);
+  sm.textContent=parts.join(' · ');
+  d.appendChild(sm);
+  return d;
+}
+
+function pick(i){
+  cur=found[i];
+  const kt=$('kt');kt.innerHTML='';
+  const b1=document.createElement('b');b1.textContent=cur.model||'(brak modelu)';kt.appendChild(b1);
+  kt.appendChild(document.createTextNode((cur.opt?' ['+cur.opt+']':'')+' · S/N …'+(cur.sn||'')));
+  kt.appendChild(document.createElement('br'));
+  kt.appendChild(document.createTextNode('Status: '));
+  const b2=document.createElement('b');b2.textContent=cur.status||'';kt.appendChild(b2);
+  if(cur.klient)kt.appendChild(document.createTextNode(' · '+cur.klient));
+  ['klient','dokWyd','handlowiec','kurier','list'].forEach(k=>$(k).value=cur[k]||'');
+  $('cList').innerHTML='';
+  $('wf').style.display='flex';
+}
+
+async function find(){
+  const sn=$('wsn').value.trim();if(!sn)return;
+  $('btnFind').disabled=true;
+  try{st('Szukanie…','i');const r=await api('find',{sn});st('');found=r.rows||[];cur=null;$('wf').style.display='none';
+    const kt=$('kt');kt.innerHTML='';
+    if(!found.length){kt.textContent='Nie ma takiego S/N w magazynie.';return}
     if(found.length===1)return pick(0);
-    $('kt').innerHTML='Kilka pasujących – wybierz:';
-    found.forEach((x,i)=>{const d=document.createElement('div');d.className='r';
-      d.innerHTML=`<b>${x.model}</b> · …${x.sn}<small>${x.status}${x.klient?' · '+x.klient:''}${x.dokPrz?' · '+x.dokPrz:''}</small>`;
-      d.onclick=()=>pick(i);$('kt').appendChild(d)})}
-  catch(x){st(x.message,'e')}}
-async function act(s){if(!cur)return;
+    const info=document.createElement('div');info.style.marginBottom='6px';info.textContent='Kilka pasujących – wybierz:';kt.appendChild(info);
+    found.forEach((x,i)=>{const d=renderItemRow(x,true);d.onclick=()=>pick(i);kt.appendChild(d)})}
+  catch(x){st(x.message,'e')}
+  finally{$('btnFind').disabled=false}}
+
+async function act(s){
+  if(!cur||actBusy)return;
   if(!$('klient').value.trim())return st('Wpisz klienta.','e');
   if(s==='Wysłany'&&!$('kurier').value)return st('Wybierz kuriera.','e');
+  actBusy=true;$('btnRes').disabled=true;$('btnSend').disabled=true;
   try{st('Zapisywanie…','i');await api('issue',{row:cur.row,sn:cur.sn,newStatus:s,klient:$('klient').value.trim(),dokWyd:$('dokWyd').value.trim(),
     handlowiec:$('handlowiec').value.trim(),kurier:$('kurier').value,list:$('list').value.trim()});
-    st(s==='Wysłany'?'Oznaczono jako wysłane ✔':'Zarezerwowano ✔','s');find()}catch(x){st('Błąd: '+x.message,'e')}}
+    const msg=s==='Wysłany'?'Oznaczono jako wysłane ✔':'Zarezerwowano ✔';
+    await find();st(msg,'s')}
+  catch(x){st('Błąd: '+x.message,'e')}
+  finally{actBusy=false;$('btnRes').disabled=false;$('btnSend').disabled=false}}
 
-async function srch(){const q=$('q').value.trim();if(!q)return;
+async function srch(){
+  const q=$('q').value.trim();if(!q)return;
+  $('btnSrch').disabled=true;
   try{st('Szukanie…','i');const r=await api('search',{q});st('');
-    $('res').innerHTML=r.rows.length?'':'<div class="r">Brak wyników.</div>';
-    r.rows.forEach(x=>{const d=document.createElement('div');d.className='r';
-      d.innerHTML=`<b>${x.model}</b> · ${x.sn}<small>${x.status}${x.klient?' · '+x.klient:''}${x.dokWyd?' · '+x.dokWyd:''}${x.mac?' · '+x.mac:''}</small>`;
-      d.onclick=()=>{$('wsn').value=x.sn;tab(1,document.querySelectorAll('nav button')[1]);find()};$('res').appendChild(d)})}
-  catch(x){st(x.message,'e')}}
+    const res=$('res');res.innerHTML='';
+    if(!(r.rows&&r.rows.length)){const empty=document.createElement('div');empty.className='r';empty.textContent='Brak wyników.';res.appendChild(empty);return}
+    r.rows.forEach(x=>{
+      const d=renderItemRow(x,false);
+      d.onclick=()=>{$('wsn').value=x.sn;$('cWsn').innerHTML='';tab(1,document.querySelectorAll('nav button')[1]);find()};
+      res.appendChild(d);
+    })}
+  catch(x){st(x.message,'e')}
+  finally{$('btnSrch').disabled=false}}
 </script></body></html>
