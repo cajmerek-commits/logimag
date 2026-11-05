@@ -1,241 +1,120 @@
 <!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Skaner Magazynowy AI</title>
-  <style>
-    :root {
-      --primary: #0284c7; --primary-hover: #0369a1; --bg: #0f172a; --card-bg: #1e293b;
-      --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
-      --success: #16a34a; --error: #dc2626; --accent: #38bdf8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-    h1 { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
-    .settings-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-    .camera-trigger { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--accent); border-radius: 10px; padding: 22px; cursor: pointer; background: rgba(56,189,248,.05); text-align: center; gap: 8px; }
-    .camera-trigger span { font-weight: 600; color: var(--accent); font-size: 1.1rem; }
-    .camera-trigger small { color: var(--text-muted); font-size: 0.8rem; }
-    #fileInput { display: none; }
-    #previewImg { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; display: none; background: #000; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
-    input, textarea { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: var(--text); font-size: 1rem; width: 100%; }
-    input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; }
-    .checkbox-row input { width: auto; cursor: pointer; }
-    .btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; transition: background .2s; }
-    .btn:active { background: var(--primary-hover); }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-    #status { font-size: 0.9rem; text-align: center; padding: 10px; border-radius: 6px; display: none; word-break: break-word; }
-    .status-info { background: #0369a1; color: #fff; }
-    .status-success { background: var(--success); color: #fff; }
-    .status-error { background: var(--error); color: #fff; }
-    #settingsModal { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>Skaner Magazynowy</h1>
-      <button class="settings-btn" onclick="toggleSettings(true)">Ustawienia</button>
-    </header>
+<html lang="pl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Magazyn</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--tx:#f8fafc;--mu:#94a3b8;--bd:#334155;--ac:#38bdf8;--pr:#0284c7}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:var(--tx);padding:12px 12px 80px;display:flex;justify-content:center}
+.c{width:100%;max-width:480px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:1.2rem;color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+label{font-size:.75rem;font-weight:600;color:var(--mu);text-transform:uppercase}
+input,select,textarea{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:10px;color:var(--tx);font-size:1rem;width:100%}
+.b{background:var(--pr);color:#fff;border:0;border-radius:8px;padding:13px;font-size:1rem;font-weight:600;cursor:pointer}
+.b.g{background:#475569}.b.o{background:#16a34a}.b:disabled{opacity:.5}
+.cam{border:2px dashed var(--ac);border-radius:10px;padding:18px;text-align:center;color:var(--ac);font-weight:600;cursor:pointer}
+#st{display:none;padding:10px;border-radius:6px;text-align:center;word-break:break-word;font-size:.9rem}
+.i{background:#0369a1}.s{background:#16a34a}.e{background:#dc2626}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd)}
+nav button{flex:1;padding:16px;background:none;border:0;color:var(--mu);font-size:1rem}
+nav button.on{color:var(--ac);font-weight:700}
+.tab{display:none;flex-direction:column;gap:12px}.tab.on{display:flex}
+.r{padding:10px;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.9rem}
+.r small{color:var(--mu);display:block}
+#lg{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
+#pv{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#000;display:none}
+</style></head><body>
+<div id="lg"><div class="card" style="width:100%;max-width:340px"><h1>Magazyn</h1><label>Hasło</label>
+<input type="password" id="pin" autocomplete="current-password"><button class="b" onclick="login()">Wejdź</button></div></div>
+<div class="c">
+<h1>Skaner Magazynowy</h1><div id="st"></div>
 
-    <div id="status"></div>
+<div class="tab on" id="t0">
+<div class="card"><label>Dok. przyjęcia (WZ / faktura dostawcy)</label><input id="dokPrz"></div>
+<div class="card"><label for="fi" class="cam">📷 Zrób zdjęcie etykiety</label>
+<input type="file" id="fi" accept="image/*" capture="environment" hidden><img id="pv"></div>
+<div class="card">
+<label>Producent</label><input id="producent"><label>Model</label><input id="model" list="ml">
+<datalist id="ml"></datalist><label>Numer seryjny (S/N)</label><input id="sn">
+<label>MAC</label><input id="mac"><label>P/N</label><input id="pn"><label>FW / Rev</label><input id="fw">
+<label>Uwagi</label><input id="uwagi">
+<button class="b" id="sv" onclick="add()">Zapisz w magazynie</button>
+<button class="b g" onclick="clr()">Wyczyść</button></div></div>
 
-    <div class="card">
-      <div class="field">
-        <label for="clientField">Klient / Zamówienie docelowe</label>
-        <input type="text" id="clientField" placeholder="np. Firma ABC / ZAM-2026-001">
-      </div>
-      <label class="checkbox-row">
-        <input type="checkbox" id="keepClientCheckbox" checked>
-        <span>Zapamiętaj klienta dla kolejnych skanów</span>
-      </label>
-    </div>
+<div class="tab" id="t1">
+<div class="card"><label>S/N urządzenia</label><input id="wsn"><button class="b" onclick="find()">Znajdź</button><div id="kt"></div></div>
+<div class="card" id="wf" style="display:none">
+<label>Klient</label><input id="klient"><label>Dok. wydania (WZ / faktura)</label><input id="dokWyd">
+<label>Handlowiec</label><input id="handlowiec">
+<button class="b g" onclick="act('Zarezerwowany')">Zarezerwuj</button>
+<label>Kurier</label><select id="kurier"><option></option><option>DHL</option><option>DPD</option><option>InPost</option><option>UPS</option><option>FedEx</option><option>Odbiór osobisty</option></select>
+<label>Nr listu przewozowego</label><input id="list">
+<button class="b o" onclick="act('Wysłany')">Wyślij</button></div></div>
 
-    <div class="card">
-      <label for="fileInput" class="camera-trigger">
-        <svg width="32" height="32" fill="none" stroke="#38bdf8" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span>Zrób zdjęcie etykiety</span>
-        <small>Aparat uruchomi się automatycznie</small>
-      </label>
-      <input type="file" id="fileInput" accept="image/*" capture="environment">
-      <img id="previewImg" alt="Podgląd etykiety">
-    </div>
+<div class="tab" id="t2"><div class="card"><label>Szukaj (S/N, MAC, klient, WZ, model…)</label>
+<input id="q"><button class="b" onclick="srch()">Szukaj</button></div><div id="res" style="display:flex;flex-direction:column;gap:8px"></div></div>
+</div>
+<nav><button class="on" onclick="tab(0,this)">Przyjęcie</button><button onclick="tab(1,this)">Wydanie</button><button onclick="tab(2,this)">Szukaj</button></nav>
 
-    <div class="card">
-      <div class="field">
-        <label for="modelField">Model / Urządzenie</label>
-        <input type="text" id="modelField" placeholder="Wykryty model">
-      </div>
-      <div class="field">
-        <label for="serialField">Numer Seryjny (S/N)</label>
-        <input type="text" id="serialField" placeholder="Wykryty S/N">
-      </div>
-      <div class="field">
-        <label for="macField">Adres MAC</label>
-        <input type="text" id="macField" placeholder="XX:XX:XX:XX:XX:XX">
-      </div>
-      <div class="field">
-        <label for="extraField">Dodatkowe informacje (P/N, Part No, Uwagi)</label>
-        <textarea id="extraField" rows="2" placeholder="Pozostałe parametry"></textarea>
-      </div>
-      <button id="saveBtn" class="btn" onclick="saveToSheets()" disabled>Zapisz w Arkuszu Google</button>
-    </div>
-  </div>
+<script>
+const URL_="https://script.google.com/macros/s/AKfycbymCX6LWnN7MDzrfGMMlBc2gAn8tbUYnshA8Pp9XinmUUDp12gqw-NLmZanNxhBvvqW-A/exec";
+const $=id=>document.getElementById(id);
+const ls=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch{return null}};
+let PIN=ls('pin2')||'';
+const F=['producent','model','sn','mac','pn','fw','uwagi'];
 
-  <div id="settingsModal">
-    <div class="card" style="width:100%;max-width:420px;">
-      <h2 style="font-size:1.1rem;color:#38bdf8;">Ustawienia</h2>
-      <div class="field">
-        <label for="scriptUrlInput">URL Google Apps Script (/exec)</label>
-        <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
-      </div>
-      <small style="color:#94a3b8">Klucz Gemini nie jest już potrzebny w aplikacji – jest przechowywany w Apps Script.</small>
-      <button class="btn" onclick="saveSettings()">Zapisz</button>
-      <button class="settings-btn" style="border:none;" onclick="toggleSettings(false)">Zamknij</button>
-    </div>
-  </div>
+function st(t,c){const s=$('st');s.className=c;s.textContent=t;s.style.display=t?'block':'none'}
+async function api(a,d={}){
+  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,action:a,pin:PIN})});
+  const t=await r.text();let j;
+  try{j=JSON.parse(t)}catch{throw new Error('Skrypt zwrócił stronę zamiast JSON – sprawdź wdrożenie (dostęp: Anyone).')}
+  if(j.status==='badpin'){PIN='';ls('pin2','');$('lg').style.display='flex';throw new Error('Złe hasło')}
+  if(j.status==='error')throw new Error(j.error);return j}
+async function login(){PIN=$('pin').value.trim();
+  try{const r=await api('ping');ls('pin2',PIN);$('lg').style.display='none';st('');$('ml').innerHTML=r.models.map(m=>`<option value="${m}">`).join('')}
+  catch(e){alert(e.message)}}
+window.onload=()=>{$('dokPrz').value=ls('dokPrz')||'';PIN?login():$('lg').style.display='flex'};
+function tab(n,b){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i==n));
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b))}
 
-  <script>
-    // URL w formie /macros/s/<ID>/exec (BEZ /a/macros/domena/), wdrożenie: dostęp "Anyone"
-    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbymCX6LWnN7MDzrfGMMlBc2gAn8tbUYnshA8Pp9XinmUUDp12gqw-NLmZanNxhBvvqW-A/exec";
-    const URL_KEY = 'gas_url_v3'; // nowy klucz – ignoruje stare, błędne wpisy z localStorage
+function img(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();
+  i.onload=()=>{const k=Math.min(1,1400/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
+  c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);
+  URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.85).split(',')[1])};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
+$('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{st('Odczyt etykiety…','i');const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
+    const d=(await api('analyze',{image:b})).data;
+    $('producent').value=d.producent||'';$('model').value=d.model||'';$('sn').value=d.serial||'';
+    $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';
+    st('Sprawdź dane (zwłaszcza S/N) i zapisz.','s')}catch(x){st('Błąd odczytu: '+x.message,'e')}};
+function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';st('')}
+async function add(force){
+  const d={dokPrz:$('dokPrz').value.trim(),force:force===true};F.forEach(k=>d[k]=$(k).value.trim());
+  ls('dokPrz',d.dokPrz);if(!d.sn)return st('Wpisz S/N.','e');
+  try{st('Zapisywanie…','i');const r=await api('add',d);
+    if(r.status==='duplicate'){st('');
+      if(confirm(`S/N już jest w bazie (${r.row.model}, status: ${r.row.status}${r.row.klient?', klient: '+r.row.klient:''}).\nZapisać mimo to?`))return add(true);return}
+    st('Dodano do magazynu ✔','s');clr();st('Dodano do magazynu ✔','s')}catch(x){st('Błąd zapisu: '+x.message,'e')}}
 
-    const $ = (id) => document.getElementById(id);
-    const fileInput = $('fileInput'), previewImg = $('previewImg'), saveBtn = $('saveBtn'),
-          statusDiv = $('status'), clientField = $('clientField'),
-          keepClientCheckbox = $('keepClientCheckbox'), scriptUrlInput = $('scriptUrlInput');
+let cur=null;
+async function find(){const sn=$('wsn').value.trim();if(!sn)return;
+  try{st('Szukanie…','i');const r=await api('find',{sn});st('');cur=r.row;
+    if(!cur){$('kt').textContent='Nie ma takiego S/N w magazynie.';$('wf').style.display='none';return}
+    $('kt').innerHTML=`<b>${cur.model}</b> · S/N ${cur.sn}<br>Status: <b>${cur.status}</b>${cur.klient?' · '+cur.klient:''}`;
+    ['klient','dokWyd','handlowiec','kurier','list'].forEach(k=>$(k).value=cur[k]||'');$('wf').style.display='flex'}
+  catch(x){st(x.message,'e')}}
+async function act(s){if(!cur)return;
+  if(!$('klient').value.trim())return st('Wpisz klienta.','e');
+  if(s==='Wysłany'&&!$('kurier').value)return st('Wybierz kuriera.','e');
+  try{st('Zapisywanie…','i');await api('issue',{sn:cur.sn,newStatus:s,klient:$('klient').value.trim(),dokWyd:$('dokWyd').value.trim(),
+    handlowiec:$('handlowiec').value.trim(),kurier:$('kurier').value,list:$('list').value.trim()});
+    st(s==='Wysłany'?'Oznaczono jako wysłane ✔':'Zarezerwowano ✔','s');find()}catch(x){st('Błąd: '+x.message,'e')}}
 
-    function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
-    function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
-    function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
-
-    function getGasUrl() { return lsGet(URL_KEY) || DEFAULT_GAS_URL; }
-
-    window.addEventListener('load', () => {
-      scriptUrlInput.value = getGasUrl();
-      clientField.value = lsGet('last_client') || '';
-    });
-
-    function toggleSettings(show) { $('settingsModal').style.display = show ? 'flex' : 'none'; }
-
-    function saveSettings() {
-      const url = scriptUrlInput.value.trim();
-      if (!url) { lsDel(URL_KEY); } else { lsSet(URL_KEY, url); }
-      toggleSettings(false);
-      showStatus('Zapisano ustawienia.', 'status-success');
-    }
-
-    function showStatus(text, cls) {
-      statusDiv.className = cls;
-      statusDiv.textContent = text;
-      statusDiv.style.display = 'block';
-    }
-
-    // Wywołanie Apps Script: text/plain = "proste żądanie" bez preflightu CORS
-    async function callGas(payload) {
-      const res = await fetch(getGasUrl(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        redirect: 'follow'
-      });
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); }
-      catch {
-        throw new Error('Skrypt zwrócił stronę zamiast JSON (prawdopodobnie logowanie). Wdróż skrypt z dostępem "Anyone" i użyj adresu /macros/s/.../exec.');
-      }
-      if (data.status !== 'success') throw new Error(data.error || 'Nieznany błąd skryptu');
-      return data;
-    }
-
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      saveBtn.disabled = true;
-      showStatus('Kompresowanie zdjęcia...', 'status-info');
-
-      try {
-        const base64Image = await resizeAndConvertImage(file);
-        previewImg.src = 'data:image/jpeg;base64,' + base64Image;
-        previewImg.style.display = 'block';
-
-        showStatus('AI analizuje etykietę...', 'status-info');
-        const res = await callGas({ action: 'analyze', image: base64Image });
-
-        $('modelField').value = res.data.model || '';
-        $('serialField').value = res.data.serial || '';
-        $('macField').value = res.data.mac || '';
-        $('extraField').value = res.data.extra || '';
-
-        showStatus('Dane odczytane! Sprawdź poprawność i kliknij Zapisz.', 'status-success');
-      } catch (err) {
-        showStatus('Błąd odczytu AI: ' + err.message, 'status-error');
-      } finally {
-        saveBtn.disabled = false; // można wpisać/poprawić ręcznie
-      }
-    });
-
-    function resizeAndConvertImage(file) {
-      return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1400;
-          let w = img.naturalWidth, h = img.naturalHeight;
-          const scale = Math.min(1, maxDim / Math.max(w, h));
-          w = Math.round(w * scale); h = Math.round(h * scale);
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Nie można wczytać zdjęcia.')); };
-        img.src = url;
-      });
-    }
-
-    async function saveToSheets() {
-      saveBtn.disabled = true;
-      showStatus('Wysyłanie danych do arkusza...', 'status-info');
-
-      const clientVal = clientField.value.trim();
-      if (keepClientCheckbox.checked && clientVal) lsSet('last_client', clientVal);
-
-      try {
-        await callGas({
-          action: 'save',
-          client: clientVal,
-          model: $('modelField').value,
-          serial: $('serialField').value,
-          mac: $('macField').value,
-          extra: $('extraField').value
-        });
-
-        showStatus('Pomyślnie dodano wiersz do Arkusza!', 'status-success');
-
-        setTimeout(() => {
-          ['modelField', 'serialField', 'macField', 'extraField'].forEach(id => $(id).value = '');
-          previewImg.style.display = 'none';
-          fileInput.value = '';
-          statusDiv.style.display = 'none';
-          if (!keepClientCheckbox.checked) { clientField.value = ''; lsDel('last_client'); }
-          saveBtn.disabled = true;
-        }, 1500);
-      } catch (err) {
-        showStatus('Błąd zapisu: ' + err.message, 'status-error');
-        saveBtn.disabled = false;
-      }
-    }
-  </script>
-</body>
-</html>
+async function srch(){const q=$('q').value.trim();if(!q)return;
+  try{st('Szukanie…','i');const r=await api('search',{q});st('');
+    $('res').innerHTML=r.rows.length?'':'<div class="r">Brak wyników.</div>';
+    r.rows.forEach(x=>{const d=document.createElement('div');d.className='r';
+      d.innerHTML=`<b>${x.model}</b> · ${x.sn}<small>${x.status}${x.klient?' · '+x.klient:''}${x.dokWyd?' · '+x.dokWyd:''}${x.mac?' · '+x.mac:''}</small>`;
+      d.onclick=()=>{$('wsn').value=x.sn;tab(1,document.querySelectorAll('nav button')[1]);find()};$('res').appendChild(d)})}
+  catch(x){st(x.message,'e')}}
+</script></body></html>
