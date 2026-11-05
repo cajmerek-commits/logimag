@@ -20,6 +20,7 @@ nav button{flex:1;padding:16px;background:none;border:0;color:var(--mu);font-siz
 nav button.on{color:var(--ac);font-weight:700}
 .tab{display:none;flex-direction:column;gap:12px}.tab.on{display:flex}
 .r{padding:10px;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.9rem}
+.r button{background:#475569;color:#fff;border:0;border-radius:6px;padding:6px 10px;margin-left:6px}
 .r small{color:var(--mu);display:block}
 #lg{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
 #pv{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#000;display:none}
@@ -34,7 +35,9 @@ nav button.on{color:var(--ac);font-weight:700}
 <div class="card"><div style="display:flex;gap:8px">
 <label for="fi" class="cam" style="flex:1">📷 Aparat</label><label for="fg" class="cam" style="flex:1">🖼️ Z galerii</label></div>
 <input type="file" id="fi" accept="image/*" capture="environment" hidden>
-<input type="file" id="fg" accept="image/*" hidden><img id="pv"></div>
+<input type="file" id="fg" accept="image/*" hidden>
+<label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:.85rem"><input type="checkbox" id="useAI" checked style="width:auto"> Czytaj też przez AI (model, P/N, Option…)</label>
+<img id="pv"><div id="codes" style="display:flex;flex-direction:column;gap:6px"></div></div>
 <div class="card">
 <label>Producent</label><input id="producent"><label>Model</label><input id="model" list="ml">
 <datalist id="ml"></datalist><label>S/N (zapisze się ostatnie 6 znaków)</label><input id="sn">
@@ -82,19 +85,65 @@ window.onload=()=>{$('dokPrz').value=ls('dokPrz')||'';PIN?login():$('lg').style.
 function tab(n,b){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i==n));
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b))}
 
-function img(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();
-  i.onload=()=>{const k=Math.min(1,1100/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
+function toCanvas(file,max){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();
+  i.onload=()=>{const k=Math.min(1,max/Math.max(i.naturalWidth,i.naturalHeight)),c=document.createElement('canvas');
   c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);
-  URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.8).split(',')[1])};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
-$('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  let n=0,iv;try{st('Odczyt etykiety… 0 s','i');iv=setInterval(()=>st('Odczyt etykiety… '+(++n)+' s','i'),1000);const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
-    const r=await api('analyze',{image:b}),d=r.data;
-    $('producent').value=d.producent||'';$('model').value=d.model||'';$('sn').value=d.serial||'';
-    $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';$('opt').value=d.option||'';
-    clearInterval(iv);st(`Sprawdź dane (zwłaszcza S/N) i zapisz. [${(r.ms/1000).toFixed(1)} s · ${r.model}]`,'s')}catch(x){clearInterval(iv);st('Błąd odczytu: '+x.message,'e')}};
-$('fg').onchange=$('fi').onchange;
-function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';$('fg').value='';st('')}
+  URL.revokeObjectURL(u);ok(c)};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
+function scaled(c,max){const k=Math.min(1,max/Math.max(c.width,c.height)),d=document.createElement('canvas');
+  d.width=Math.round(c.width*k);d.height=Math.round(c.height*k);d.getContext('2d').drawImage(c,0,0,d.width,d.height);
+  return d.toDataURL('image/jpeg',.8).split(',')[1]}
+
+// ---- odczyt kodów kreskowych i QR (lokalnie w telefonie) ----
+function loadZX(){return new Promise((ok,no)=>{if(window.ZXing)return ok();const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=ok;s.onerror=()=>no(new Error('zxing'));document.head.appendChild(s)})}
+const TILES=[[0,0,1,1],[0,0,1,.34],[0,.33,1,.34],[0,.66,1,.34],[0,0,1,.5],[0,.5,1,.5],[0,0,.5,1],[.5,0,.5,1],[0,0,.6,.6],[.4,0,.6,.6],[0,.4,.6,.6],[.4,.4,.6,.6]];
+async function decodeCodes(cv){
+  const out=new Set();
+  if('BarcodeDetector' in window){try{const fm=await BarcodeDetector.getSupportedFormats(),d=new BarcodeDetector({formats:fm});
+    (await d.detect(cv)).forEach(x=>x.rawValue&&out.add(x.rawValue.trim()));if(out.size)return{codes:[...out],engine:'wbudowany'}}catch(e){}}
+  try{await loadZX();const Z=window.ZXing,h=new Map();h.set(Z.DecodeHintType.TRY_HARDER,true);const rd=new Z.MultiFormatReader();rd.setHints(h);
+    for(const [x,y,w,hh] of TILES){const tc=document.createElement('canvas');tc.width=Math.round(cv.width*w);tc.height=Math.round(cv.height*hh);
+      tc.getContext('2d').drawImage(cv,cv.width*x,cv.height*y,tc.width,tc.height,0,0,tc.width,tc.height);
+      try{out.add(rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(tc)))).getText().trim())}catch(e){}
+      await new Promise(r=>setTimeout(r))}}catch(e){}
+  return{codes:[...out],engine:'ZXing'}}
+const HEX12=/^[0-9a-f]{12}$/i;
+function macFmt(v){const c=String(v).replace(/[^0-9a-f]/gi,'');return c.length===12?c.match(/../g).join(':').toUpperCase():v}
+function classify(codes){
+  const c=codes.filter(x=>x&&!/^REL-/i.test(x)&&!/^\d{13}$/.test(x)&&!/^https?:/i.test(x));
+  let mac=c.find(x=>/^([0-9a-f]{2}[:\-]){5}[0-9a-f]{2}$/i.test(x)),sn='';
+  const cand=c.filter(x=>/^[A-Z0-9]{8,}$/i.test(x)&&x!==mac),hex=cand.filter(x=>HEX12.test(x)),oth=cand.filter(x=>!HEX12.test(x));
+  if(oth.length){sn=oth.sort((a,b)=>b.length-a.length)[0];if(!mac&&hex.length)mac=hex[0]}
+  else{sn=hex[0]||'';if(!mac&&hex.length>1)mac=hex[1]}
+  return{sn,mac:mac||''}}
+function showCodes(codes){const b=$('codes');b.innerHTML='';
+  codes.forEach(v=>{const d=document.createElement('div');d.className='r';d.textContent=v;
+    [['S/N',()=>$('sn').value=v],['MAC',()=>$('mac').value=macFmt(v)]].forEach(([t,f])=>{const x=document.createElement('button');x.textContent=t;x.onclick=f;d.appendChild(x)});b.appendChild(d)})}
+const l6=s=>String(s||'').replace(/\s+/g,'').toUpperCase().slice(-6);
+let aiBusy=false;
+
+const onPick=async e=>{const f=e.target.files[0];if(!f)return;
+  F.forEach(k=>$(k).value='');$('codes').innerHTML='';const t0=Date.now();let ai=null;
+  try{
+    st('Wczytywanie zdjęcia…','i');const cv=await toCanvas(f,1600),b=scaled(cv,1100);
+    $('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
+    if($('useAI').checked){aiBusy=true;ai=api('analyze',{image:b});ai.then(()=>aiBusy=false,()=>aiBusy=false)}
+    st('Czytanie kodów…','i');const dr=await decodeCodes(cv),g=classify(dr.codes);
+    if(g.sn)$('sn').value=g.sn;if(g.mac)$('mac').value=macFmt(g.mac);showCodes(dr.codes);
+    const tc=((Date.now()-t0)/1000).toFixed(1),n=dr.codes.length;
+    if(!ai){st(n?`Odczytano ${n} kod(y) w ${tc} s [${dr.engine}]. Sprawdź S/N i zapisz.`:'Nie znaleziono kodów – włącz AI lub wpisz ręcznie.',n?'s':'e');return}
+    st(`Kody: ${n} (${tc} s, ${dr.engine}). AI czyta resztę…`,'i');
+    let r;try{r=await ai}catch(x){st('AI niedostępne ('+x.message+') – dane z kodów zachowane.','e');return}
+    const d=r.data,set=(id,v)=>{if(v&&!$(id).value)$(id).value=v};
+    set('producent',d.producent);set('model',d.model);set('pn',d.pn);set('fw',d.fw);set('opt',d.option);set('mac',d.mac);
+    const warn=$('sn').value&&d.serial&&l6(d.serial)!==l6($('sn').value);set('sn',d.serial);
+    warn?st('⚠ S/N z kodu różni się od odczytu AI ('+d.serial+') – sprawdź!','e')
+        :st(`Gotowe. Sprawdź S/N i zapisz. [kody ${tc} s · AI ${(r.ms/1000).toFixed(1)} s]`,'s')
+  }catch(x){st('Błąd: '+x.message,'e')}};
+$('fi').onchange=onPick;$('fg').onchange=onPick;
+function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';$('fg').value='';$('codes').innerHTML='';st('')}
 async function add(force){
+  if(aiBusy&&!confirm('AI jeszcze czyta etykietę (model, P/N…). Zapisać bez tych danych?'))return;
   const d={dokPrz:$('dokPrz').value.trim(),force:force===true};F.forEach(k=>d[k]=$(k).value.trim());
   ls('dokPrz',d.dokPrz);if(!d.sn)return st('Wpisz S/N.','e');
   try{st('Zapisywanie…','i');const r=await api('add',d);
