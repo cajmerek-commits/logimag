@@ -35,14 +35,14 @@ nav button.on{color:var(--ac);font-weight:700}
 <input type="file" id="fi" accept="image/*" capture="environment" hidden><img id="pv"></div>
 <div class="card">
 <label>Producent</label><input id="producent"><label>Model</label><input id="model" list="ml">
-<datalist id="ml"></datalist><label>Numer seryjny (S/N)</label><input id="sn">
-<label>MAC</label><input id="mac"><label>P/N</label><input id="pn"><label>FW / Rev</label><input id="fw">
+<datalist id="ml"></datalist><label>S/N (zapisze się ostatnie 6 znaków)</label><input id="sn">
+<label>MAC</label><input id="mac"><label>P/N</label><input id="pn"><label>FW / Rev</label><input id="fw"><label>Option</label><input id="opt">
 <label>Uwagi</label><input id="uwagi">
 <button class="b" id="sv" onclick="add()">Zapisz w magazynie</button>
 <button class="b g" onclick="clr()">Wyczyść</button></div></div>
 
 <div class="tab" id="t1">
-<div class="card"><label>S/N urządzenia</label><input id="wsn"><button class="b" onclick="find()">Znajdź</button><div id="kt"></div></div>
+<div class="card"><label>S/N (wystarczy ostatnie 6 znaków)</label><input id="wsn"><button class="b" onclick="find()">Znajdź</button><div id="kt"></div></div>
 <div class="card" id="wf" style="display:none">
 <label>Klient</label><input id="klient"><label>Dok. wydania (WZ / faktura)</label><input id="dokWyd">
 <label>Handlowiec</label><input id="handlowiec">
@@ -61,7 +61,7 @@ const URL_="https://script.google.com/macros/s/AKfycbymCX6LWnN7MDzrfGMMlBc2gAn8t
 const $=id=>document.getElementById(id);
 const ls=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch{return null}};
 let PIN=ls('pin2')||'';
-const F=['producent','model','sn','mac','pn','fw','uwagi'];
+const F=['producent','model','sn','mac','pn','fw','opt','uwagi'];
 
 function st(t,c){const s=$('st');s.className=c;s.textContent=t;s.style.display=t?'block':'none'}
 async function api(a,d={}){
@@ -88,7 +88,7 @@ $('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   let n=0,iv;try{st('Odczyt etykiety… 0 s','i');iv=setInterval(()=>st('Odczyt etykiety… '+(++n)+' s','i'),1000);const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
     const d=(await api('analyze',{image:b})).data;
     $('producent').value=d.producent||'';$('model').value=d.model||'';$('sn').value=d.serial||'';
-    $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';
+    $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';$('opt').value=d.option||'';
     clearInterval(iv);st('Sprawdź dane (zwłaszcza S/N) i zapisz.','s')}catch(x){clearInterval(iv);st('Błąd odczytu: '+x.message,'e')}};
 function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';st('')}
 async function add(force){
@@ -99,17 +99,23 @@ async function add(force){
       if(confirm(`S/N już jest w bazie (${r.row.model}, status: ${r.row.status}${r.row.klient?', klient: '+r.row.klient:''}).\nZapisać mimo to?`))return add(true);return}
     st('Dodano do magazynu ✔','s');clr();st('Dodano do magazynu ✔','s')}catch(x){st('Błąd zapisu: '+x.message,'e')}}
 
-let cur=null;
+let cur=null,found=[];
+function pick(i){cur=found[i];
+  $('kt').innerHTML=`<b>${cur.model}</b>${cur.opt?' ['+cur.opt+']':''} · S/N …${cur.sn}<br>Status: <b>${cur.status}</b>${cur.klient?' · '+cur.klient:''}`;
+  ['klient','dokWyd','handlowiec','kurier','list'].forEach(k=>$(k).value=cur[k]||'');$('wf').style.display='flex'}
 async function find(){const sn=$('wsn').value.trim();if(!sn)return;
-  try{st('Szukanie…','i');const r=await api('find',{sn});st('');cur=r.row;
-    if(!cur){$('kt').textContent='Nie ma takiego S/N w magazynie.';$('wf').style.display='none';return}
-    $('kt').innerHTML=`<b>${cur.model}</b> · S/N ${cur.sn}<br>Status: <b>${cur.status}</b>${cur.klient?' · '+cur.klient:''}`;
-    ['klient','dokWyd','handlowiec','kurier','list'].forEach(k=>$(k).value=cur[k]||'');$('wf').style.display='flex'}
+  try{st('Szukanie…','i');const r=await api('find',{sn});st('');found=r.rows;cur=null;$('wf').style.display='none';
+    if(!found.length){$('kt').textContent='Nie ma takiego S/N w magazynie.';return}
+    if(found.length===1)return pick(0);
+    $('kt').innerHTML='Kilka pasujących – wybierz:';
+    found.forEach((x,i)=>{const d=document.createElement('div');d.className='r';
+      d.innerHTML=`<b>${x.model}</b> · …${x.sn}<small>${x.status}${x.klient?' · '+x.klient:''}${x.dokPrz?' · '+x.dokPrz:''}</small>`;
+      d.onclick=()=>pick(i);$('kt').appendChild(d)})}
   catch(x){st(x.message,'e')}}
 async function act(s){if(!cur)return;
   if(!$('klient').value.trim())return st('Wpisz klienta.','e');
   if(s==='Wysłany'&&!$('kurier').value)return st('Wybierz kuriera.','e');
-  try{st('Zapisywanie…','i');await api('issue',{sn:cur.sn,newStatus:s,klient:$('klient').value.trim(),dokWyd:$('dokWyd').value.trim(),
+  try{st('Zapisywanie…','i');await api('issue',{row:cur.row,sn:cur.sn,newStatus:s,klient:$('klient').value.trim(),dokWyd:$('dokWyd').value.trim(),
     handlowiec:$('handlowiec').value.trim(),kurier:$('kurier').value,list:$('list').value.trim()});
     st(s==='Wysłany'?'Oznaczono jako wysłane ✔':'Zarezerwowano ✔','s');find()}catch(x){st('Błąd: '+x.message,'e')}}
 
