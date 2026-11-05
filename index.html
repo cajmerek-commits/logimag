@@ -65,8 +65,11 @@ const F=['producent','model','sn','mac','pn','fw','uwagi'];
 
 function st(t,c){const s=$('st');s.className=c;s.textContent=t;s.style.display=t?'block':'none'}
 async function api(a,d={}){
-  const r=await fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,action:a,pin:PIN})});
-  const t=await r.text();let j;
+  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),90000);let t;
+  try{const r=await fetch(URL_,{method:'POST',signal:ac.signal,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...d,action:a,pin:PIN})});t=await r.text()}
+  catch(x){throw new Error(x.name==='AbortError'?'Brak odpowiedzi przez 90 s. Sprawdź „Wykonania” w Apps Script.':x.message)}
+  finally{clearTimeout(tm)}
+  let j;
   try{j=JSON.parse(t)}catch{throw new Error('Skrypt zwrócił stronę zamiast JSON – sprawdź wdrożenie (dostęp: Anyone).')}
   if(j.status==='badpin'){PIN='';ls('pin2','');$('lg').style.display='flex';throw new Error('Złe hasło')}
   if(j.status==='error')throw new Error(j.error);return j}
@@ -82,11 +85,11 @@ function img(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file
   c.width=Math.round(i.naturalWidth*k);c.height=Math.round(i.naturalHeight*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);
   URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.85).split(',')[1])};i.onerror=()=>no(new Error('Nie można wczytać zdjęcia'));i.src=u})}
 $('fi').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  try{st('Odczyt etykiety…','i');const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
+  let n=0,iv;try{st('Odczyt etykiety… 0 s','i');iv=setInterval(()=>st('Odczyt etykiety… '+(++n)+' s','i'),1000);const b=await img(f);$('pv').src='data:image/jpeg;base64,'+b;$('pv').style.display='block';
     const d=(await api('analyze',{image:b})).data;
     $('producent').value=d.producent||'';$('model').value=d.model||'';$('sn').value=d.serial||'';
     $('mac').value=d.mac||'';$('pn').value=d.pn||'';$('fw').value=d.fw||'';
-    st('Sprawdź dane (zwłaszcza S/N) i zapisz.','s')}catch(x){st('Błąd odczytu: '+x.message,'e')}};
+    clearInterval(iv);st('Sprawdź dane (zwłaszcza S/N) i zapisz.','s')}catch(x){clearInterval(iv);st('Błąd odczytu: '+x.message,'e')}};
 function clr(){F.forEach(k=>$(k).value='');$('pv').style.display='none';$('fi').value='';st('')}
 async function add(force){
   const d={dokPrz:$('dokPrz').value.trim(),force:force===true};F.forEach(k=>d[k]=$(k).value.trim());
